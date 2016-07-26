@@ -1,37 +1,31 @@
-/* global document:false, appUrl:false, ajaxFunctions:false */
+/* global document:false, appUrl:false, ajaxFunctions:false, window:false */
 
 'use strict';
 
 (function () {
-  var profileId = document.querySelector('#profile-id') || null;
-  var profileUsername = document.querySelector('#profile-username') || null;
-  var profileRepos = document.querySelector('#profile-repos') || null;
   var displayName = document.querySelector('#display-name');
-  var apiUrl = appUrl + '/api/:id';
+  var authLink = document.querySelector('#auth-link');
+  var authUrl = appUrl + '/api/authenticated';
+  var apiUrl = appUrl + '/api/users/me';
 
-  function updateHtmlElement(data, element, userProperty) {
-    element.innerHTML = data[userProperty];
-  }
-
-  ajaxFunctions.ready(ajaxFunctions.ajaxRequest('GET', apiUrl, function (data) {
-    var userObject = JSON.parse(data);
-
-    if (userObject.displayName === null) {
-      updateHtmlElement(userObject, displayName, 'username');
-    } else {
-      updateHtmlElement(userObject, displayName, 'displayName');
+  ajaxFunctions.ready(ajaxFunctions.ajaxRequest('GET', authUrl, function (authenticated) {
+    if (authenticated === 'false') {
+      displayName.innerHTML = 'Guest';
+      authLink.innerHTML = 'Login';
+      authLink.href = '/login';
+      document.querySelectorAll('.auth-required').forEach(function (el) {
+        el.hidden = true;
+      });
+      return;
     }
+    ajaxFunctions.ajaxRequest('GET', apiUrl, function (data) {
+      var userObject = JSON.parse(data);
 
-    if (profileId !== null) {
-      updateHtmlElement(userObject, profileId, 'id');
-    }
+      if (window.gotUserID) {
+        window.gotUserID(userObject._id);
+      }
 
-    if (profileUsername !== null) {
-      updateHtmlElement(userObject, profileUsername, 'username');
-    }
-
-    if (profileRepos !== null) {
-      updateHtmlElement(userObject, profileRepos, 'publicRepos');
-    }
+      displayName.innerHTML = userObject.github.displayName || userObject.github.username;
+    });
   }));
 })();
